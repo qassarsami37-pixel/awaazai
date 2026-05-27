@@ -1,1 +1,1 @@
-web: gunicorn --chdir voice-app -w 2 -b 0.0.0.0:$PORT app:app
+web: gunicorn --chdir voice-app -w 2 -b 0.0.0.0:${PORT:-5000} app:app
