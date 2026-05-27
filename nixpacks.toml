@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python311"]
+
+[phases.install]
+cmds = ["pip install -r voice-app/requirements.txt"]
+
+[start]
+cmd = "gunicorn --chdir voice-app -w 2 -b 0.0.0.0:$PORT app:app"
