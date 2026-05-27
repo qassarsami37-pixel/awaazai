@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: awaazai
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r voice-app/requirements.txt
+    startCommand: gunicorn --chdir voice-app -w 2 -b 0.0.0.0:$PORT app:app
+    envVars:
+      - key: SARVAM_API_KEY
+        sync: false          # You will set this in the Render dashboard
+    healthCheckPath: /
