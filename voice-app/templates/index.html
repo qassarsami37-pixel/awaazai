@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>आवाज़ — Indian Language Voice Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --surface3: #22223a;
+      --border: rgba(255,255,255,0.07);
+      --border-focus: rgba(139,92,246,0.5);
+      --primary: #8b5cf6;
+      --primary-light: #a78bfa;
+      --primary-glow: rgba(139,92,246,0.2);
+      --accent: #e879f9;
+      --text: #f0eff8;
+      --text-muted: #8b8aa8;
+      --text-dim: #4a4968;
+      --success: #10b981;
+      --error: #f87171;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient bg glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(139,92,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 1;
+      padding: 28px 40px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .logo-text .main { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, var(--primary-light), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo-text .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .powered-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .powered-badge span { color: var(--primary-light); font-weight: 500; }
+
+    .share-btn {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s;
+    }
+    .share-btn:hover {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.4);
+      color: var(--primary-light);
+    }
+    .share-btn.copied {
+      background: rgba(16,185,129,0.12);
+      border-color: rgba(16,185,129,0.35);
+      color: var(--success);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s, transform 0.22s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 8px 0 4px;
+    }
+
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 700;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      background: linear-gradient(135deg, #fff 30%, var(--primary-light) 70%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header .icon {
+      width: 28px;
+      height: 28px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .card-header h2 { font-size: 14px; font-weight: 600; color: var(--text); }
+    .card-header .hint { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+
+    .card-body { padding: 20px 22px; }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Noto Sans Devanagari', 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
+    }
+
+    textarea::placeholder { color: var(--text-dim); }
+
+    .char-count {
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 8px;
+      transition: color 0.2s;
+    }
+
+    .char-count.warn { color: #f59e0b; }
+    .char-count.over { color: var(--error); }
+
+    .quick-phrases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .phrase-btn {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.18s;
+      font-family: 'Noto Sans Devanagari', 'Inter', sans-serif;
+    }
+
+    .phrase-btn:hover {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.4);
+      color: var(--primary-light);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 30px; }
+      header { padding: 20px 16px 0; }
+      main { padding: 28px 14px 48px; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238b8aa8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    select:focus { border-color: var(--border-focus); }
+
+    .sliders-section { display: flex; flex-direction: column; gap: 20px; }
+
+    .slider-field { display: flex; flex-direction: column; gap: 8px; }
+
+    .slider-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-light);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 100px;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(139,92,246,0.5);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+    .generate-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .generate-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.08);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .generate-btn:hover:not(:disabled)::before { opacity: 1; }
+    .generate-btn:active:not(:disabled) { transform: scale(0.98); }
+    .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .generate-btn .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .generate-btn.loading .spinner { display: block; }
+    .generate-btn.loading .btn-icon { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-card {
+      display: none;
+      flex-direction: column;
+    }
+
+    .result-card.visible { display: flex; }
+
+    .waveform-container {
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .waveform {
+      width: 100%;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .wave-bar {
+      width: 4px;
+      border-radius: 100px;
+      background: linear-gradient(to top, var(--primary), var(--accent));
+      opacity: 0.5;
+      transition: height 0.1s ease;
+    }
+
+    .wave-bar.playing {
+      opacity: 1;
+      animation: wave-anim var(--dur, 0.8s) ease-in-out infinite alternate;
+    }
+
+    @keyframes wave-anim {
+      0% { transform: scaleY(0.3); }
+      100% { transform: scaleY(1); }
+    }
+
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .play-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(139,92,246,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .play-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(139,92,246,0.5); }
+
+    .audio-progress {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 100px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .download-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .download-btn:hover {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.4);
+      color: var(--primary-light);
+    }
+
+    .error-banner {
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--error);
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .error-banner.visible { display: flex; }
+
+    .lang-tag {
+      display: inline-block;
+      font-size: 10px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(139,92,246,0.25);
+      color: var(--primary-light);
+      border-radius: 100px;
+      padding: 2px 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Transliteration toggle ── */
+    .translit-toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .translit-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.18s;
+    }
+    .translit-label.active { color: var(--primary-light); }
+
+    .toggle-switch {
+      position: relative;
+      width: 34px;
+      height: 19px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      transition: background 0.22s, border-color 0.22s;
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 11px;
+      height: 11px;
+      background: var(--text-dim);
+      border-radius: 50%;
+      transition: transform 0.22s, background 0.22s;
+    }
+    .toggle-switch input:checked ~ .toggle-track {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.5);
+    }
+    .toggle-switch input:checked ~ .toggle-thumb {
+      transform: translateX(15px);
+      background: var(--primary-light);
+    }
+
+    .translit-status {
+      font-size: 11px;
+      color: var(--primary-light);
+      min-height: 16px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+      opacity: 0;
+    }
+    .translit-status.visible { opacity: 1; }
+
+    .translit-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── History panel ── */
+    .history-card { display: none; flex-direction: column; }
+    .history-card.visible { display: flex; }
+
+    .history-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .clear-btn {
+      font-size: 11px;
+      color: var(--text-dim);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .clear-btn:hover { color: var(--error); border-color: rgba(248,113,113,0.4); }
+
+    .history-count {
+      font-size: 11px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      border-radius: 100px;
+      padding: 2px 8px;
+      min-width: 22px;
+      text-align: center;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover { background: rgba(255,255,255,0.02); }
+
+    .history-play-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      color: var(--primary-light);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.18s;
+    }
+    .history-play-btn:hover {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.4);
+    }
+    .history-play-btn.playing {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(139,92,246,0.4);
+    }
+
+    .history-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .history-text {
+      font-size: 13px;
+      color: var(--text);
+      font-family: 'Noto Sans Devanagari', 'Inter', sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .history-tag {
+      font-size: 10px;
+      color: var(--text-dim);
+      background: var(--surface3);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+
+    .history-time {
+      font-size: 10px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .history-dl-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-size: 12px;
+      padding: 5px 9px;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .history-dl-btn:hover {
+      background: var(--primary-glow);
+      border-color: rgba(139,92,246,0.35);
+      color: var(--primary-light);
+    }
+
+    .history-del-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: color 0.15s;
+      opacity: 0;
+    }
+    .history-item:hover .history-del-btn { opacity: 1; }
+    .history-del-btn:hover { color: var(--error); }
+
+    .history-empty {
+      padding: 32px 22px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    /* ── Batch Export ── */
+    .batch-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: auto;
+      align-self: center;
+    }
+    #batchInput {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 14px;
+      resize: vertical;
+      min-height: 130px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #batchInput:focus { border-color: var(--border-focus); }
+    #batchInput::placeholder { color: var(--text-dim); }
+    .batch-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .batch-progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .batch-progress-bar {
+      height: 5px;
+      background: var(--surface3);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .batch-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.35s ease;
+    }
+    .batch-progress-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .batch-error {
+      font-size: 13px;
+      color: #f87171;
+      padding: 10px 14px;
+      background: rgba(248,113,113,0.08);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(248,113,113,0.2);
+      display: none;
+    }
+    .batch-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎙️</div>
+    <div class="logo-text">
+      <span class="main">आवाज़</span>
+      <span class="sub">Indian Language Voice Generator</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="powered-badge">Powered by <span>Sarvam AI</span></div>
+    <button class="share-btn" id="shareBtn">
+      <span class="share-icon">🔗</span>
+      <span class="share-label">Share</span>
+    </button>
+  </div>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main>
+  <div class="hero">
+    <h1>अपना पाठ बोलें</h1>
+    <p>Type text in Hindi, Bengali, Tamil, Telugu, or any of 11 Indian languages and instantly generate natural, expressive speech using Sarvam AI's multilingual voices.</p>
+  </div>
+
+  <!-- Text Input -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">✍️</div>
+      <h2>Enter Text</h2>
+      <div class="translit-toggle-wrap">
+        <label class="translit-label" id="translitLabel" for="translitToggle">Roman → Script</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="translitToggle" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+    <div class="card-body">
+      <textarea id="textInput" placeholder="यहाँ हिंदी में लिखें...&#10;&#10;Or type in any of the 11 supported Indian languages below."></textarea>
+      <div class="translit-status" id="translitStatus">
+        <div class="translit-dot"></div>
+        <span id="translitStatusText">Converting…</span>
+      </div>
+      <div class="char-count" id="charCount">0 chars</div>
+      <div class="quick-phrases">
+        <span class="hint" style="font-size:12px; color: var(--text-dim); align-self:center;">Quick phrases:</span>
+        <button class="phrase-btn" data-text="नमस्ते! आप कैसे हैं?">नमस्ते! आप कैसे हैं?</button>
+        <button class="phrase-btn" data-text="आज मौसम बहुत अच्छा है।">आज मौसम बहुत अच्छा है।</button>
+        <button class="phrase-btn" data-text="ধন্যবাদ, আপনার সাথে দেখা করে ভালো লাগলো।">বাংলা ↗</button>
+        <button class="phrase-btn" data-text="भारत एक महान देश है।">भारत एक महान देश है।</button>
+        <button class="phrase-btn" data-text="मुझे संगीत बहुत पसंद है।">मुझे संगीत पसंद है।</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice Settings -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">⚙️</div>
+      <h2>Voice Settings</h2>
+    </div>
+    <div class="card-body" style="display:flex; flex-direction:column; gap:20px;">
+      <div class="controls-grid">
+        <div class="field">
+          <label>Language</label>
+          <select id="languageSelect">
+            <option value="hi-IN">Hindi · हिंदी</option>
+            <option value="bn-IN">Bengali · বাংলা</option>
+            <option value="gu-IN">Gujarati · ગુજરાતી</option>
+            <option value="kn-IN">Kannada · ಕನ್ನಡ</option>
+            <option value="ml-IN">Malayalam · മലയാളം</option>
+            <option value="mr-IN">Marathi · मराठी</option>
+            <option value="od-IN">Odia · ଓଡ଼ିଆ</option>
+            <option value="pa-IN">Punjabi · ਪੰਜਾਬੀ</option>
+            <option value="ta-IN">Tamil · தமிழ்</option>
+            <option value="te-IN">Telugu · తెలుగు</option>
+            <option value="en-IN">English (Indian)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Speaker Voice</label>
+          <select id="speakerSelect"></select>
+        </div>
+      </div>
+
+      <div class="sliders-section">
+        <div class="slider-field">
+          <div class="slider-label-row">
+            <label>Pitch</label>
+            <span class="slider-value" id="pitchValue">0</span>
+          </div>
+          <input type="range" id="pitchSlider" min="-10" max="10" step="0.5" value="0" />
+        </div>
+        <div class="slider-field">
+          <div class="slider-label-row">
+            <label>Speed (Pace)</label>
+            <span class="slider-value" id="paceValue">1.0×</span>
+          </div>
+          <input type="range" id="paceSlider" min="0.5" max="2.0" step="0.1" value="1.0" />
+        </div>
+        <div class="slider-field">
+          <div class="slider-label-row">
+            <label>Loudness</label>
+            <span class="slider-value" id="loudnessValue">1.5</span>
+          </div>
+          <input type="range" id="loudnessSlider" min="0.5" max="3.0" step="0.1" value="1.5" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Banner -->
+  <div class="error-banner" id="errorBanner">
+    <span>⚠️</span>
+    <span id="errorText"></span>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="generate-btn" id="generateBtn">
+    <span class="btn-icon">🎙️</span>
+    <div class="spinner"></div>
+    <span id="generateBtnText">Generate Voice</span>
+  </button>
+
+  <!-- History Panel -->
+  <div class="card history-card" id="historyCard">
+    <div class="card-header">
+      <div class="icon">🕘</div>
+      <h2>Recent Clips</h2>
+      <div class="history-header-actions">
+        <span class="history-count" id="historyCount">0</span>
+        <button class="clear-btn" id="clearHistoryBtn">Clear all</button>
+      </div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- Batch Export -->
+  <div class="card" id="batchCard">
+    <div class="card-header">
+      <div class="icon">📦</div>
+      <h2>Batch Export</h2>
+      <span class="batch-hint">One line = one audio file</span>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+      <textarea id="batchInput" placeholder="Type or paste one phrase per line:&#10;नमस्ते, आप कैसे हैं?&#10;आज का मौसम बहुत अच्छा है।&#10;भारत एक महान देश है।&#10;शुक्रिया!"></textarea>
+      <div class="batch-meta" id="batchMeta">0 lines · uses current voice settings above</div>
+      <div class="batch-error" id="batchError"></div>
+      <div class="batch-progress-wrap" id="batchProgressWrap" style="display:none;">
+        <div class="batch-progress-bar">
+          <div class="batch-progress-fill" id="batchProgressFill"></div>
+        </div>
+        <div class="batch-progress-label" id="batchProgressLabel">Starting…</div>
+      </div>
+    </div>
+    <button class="generate-btn" id="batchBtn" style="margin-top:4px;">
+      <span class="btn-icon">📦</span>
+      <div class="spinner"></div>
+      <span id="batchBtnText">Generate &amp; Download ZIP</span>
+    </button>
+  </div>
+
+  <!-- Audio Result -->
+  <div class="card result-card" id="resultCard">
+    <div class="card-header">
+      <div class="icon">🔊</div>
+      <h2>Generated Audio</h2>
+      <span class="lang-tag" id="resultLang">hi-IN</span>
+    </div>
+    <div class="waveform-container">
+      <div class="waveform" id="waveform"></div>
+      <div class="audio-controls">
+        <button class="play-btn" id="playBtn" title="Play / Pause">▶</button>
+        <div class="audio-progress">
+          <div class="progress-bar-track" id="progressTrack">
+            <div class="progress-bar-fill" id="progressFill"></div>
+          </div>
+          <div class="time-row">
+            <span id="currentTime">0:00</span>
+            <span id="totalTime">0:00</span>
+          </div>
+        </div>
+        <a class="download-btn" id="downloadBtn" href="#" download="voice.wav">
+          ⬇ Download
+        </a>
+      </div>
+    </div>
+    <audio id="audioPlayer" style="display:none;"></audio>
+  </div>
+</main>
+
+<footer>
+  आवाज़ — Powered by Sarvam AI · Built with Flask · 11 Indian languages
+</footer>
+
+<script>
+  const SPEAKERS_DATA = {{ speakers_json | tojson | safe }};
+
+  const textInput = document.getElementById('textInput');
+  const charCount = document.getElementById('charCount');
+  const languageSelect = document.getElementById('languageSelect');
+  const speakerSelect = document.getElementById('speakerSelect');
+  const pitchSlider = document.getElementById('pitchSlider');
+  const paceSlider = document.getElementById('paceSlider');
+  const loudnessSlider = document.getElementById('loudnessSlider');
+  const pitchValue = document.getElementById('pitchValue');
+  const paceValue = document.getElementById('paceValue');
+  const loudnessValue = document.getElementById('loudnessValue');
+  const generateBtn = document.getElementById('generateBtn');
+  const errorBanner = document.getElementById('errorBanner');
+  const errorText = document.getElementById('errorText');
+  const resultCard = document.getElementById('resultCard');
+  const waveform = document.getElementById('waveform');
+  const playBtn = document.getElementById('playBtn');
+  const progressFill = document.getElementById('progressFill');
+  const progressTrack = document.getElementById('progressTrack');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const audioPlayer = document.getElementById('audioPlayer');
+  const resultLang = document.getElementById('resultLang');
+
+  const MAX_CHARS = 5000;
+  const SEG_SIZE = 490;
+
+  function segCount(len) { return Math.ceil(len / SEG_SIZE); }
+
+  // Char counter
+  textInput.addEventListener('input', () => {
+    const len = textInput.value.length;
+    const segs = segCount(len);
+    if (len === 0) {
+      charCount.textContent = '0 chars';
+      charCount.className = 'char-count';
+    } else if (len <= SEG_SIZE) {
+      charCount.textContent = `${len} chars`;
+      charCount.className = 'char-count';
+    } else if (len <= MAX_CHARS) {
+      charCount.textContent = `${len} chars · ${segs} segments`;
+      charCount.className = 'char-count warn';
+    } else {
+      charCount.textContent = `${len} chars — max ${MAX_CHARS.toLocaleString()}`;
+      charCount.className = 'char-count over';
+    }
+  });
+
+  // Quick phrases
+  document.querySelectorAll('.phrase-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      textInput.value = btn.dataset.text;
+      textInput.dispatchEvent(new Event('input'));
+    });
+  });
+
+  // Populate speakers from server-rendered data
+  function populateSpeakers(lang) {
+    const speakers = SPEAKERS_DATA[lang] || SPEAKERS_DATA['hi-IN'];
+    speakerSelect.innerHTML = '';
+    speakers.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      speakerSelect.appendChild(opt);
+    });
+  }
+
+  languageSelect.addEventListener('change', () => populateSpeakers(languageSelect.value));
+  populateSpeakers('hi-IN');
+
+  // Slider labels
+  pitchSlider.addEventListener('input', () => { pitchValue.textContent = pitchSlider.value; });
+  paceSlider.addEventListener('input', () => { paceValue.textContent = parseFloat(paceSlider.value).toFixed(1) + '×'; });
+  loudnessSlider.addEventListener('input', () => { loudnessValue.textContent = parseFloat(loudnessSlider.value).toFixed(1); });
+
+  // Build waveform bars
+  const BAR_COUNT = 48;
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'wave-bar';
+    const h = 12 + Math.random() * 50;
+    bar.style.height = h + 'px';
+    bar.style.setProperty('--dur', (0.5 + Math.random() * 0.7).toFixed(2) + 's');
+    bar.style.animationDelay = (Math.random() * 0.5).toFixed(2) + 's';
+    waveform.appendChild(bar);
+  }
+
+  function setWavePlaying(playing) {
+    waveform.querySelectorAll('.wave-bar').forEach(b => {
+      if (playing) b.classList.add('playing');
+      else b.classList.remove('playing');
+    });
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  // Audio player events
+  audioPlayer.addEventListener('loadedmetadata', () => {
+    totalTimeEl.textContent = formatTime(audioPlayer.duration);
+  });
+
+  audioPlayer.addEventListener('timeupdate', () => {
+    const pct = audioPlayer.duration ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0;
+    progressFill.style.width = pct + '%';
+    currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+  });
+
+  audioPlayer.addEventListener('ended', () => {
+    playBtn.textContent = '▶';
+    setWavePlaying(false);
+    progressFill.style.width = '0%';
+    currentTimeEl.textContent = '0:00';
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (audioPlayer.paused) {
+      audioPlayer.play();
+      playBtn.textContent = '⏸';
+      setWavePlaying(true);
+    } else {
+      audioPlayer.pause();
+      playBtn.textContent = '▶';
+      setWavePlaying(false);
+    }
+  });
+
+  progressTrack.addEventListener('click', (e) => {
+    const rect = progressTrack.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audioPlayer.currentTime = pct * audioPlayer.duration;
+  });
+
+  // Generate
+  generateBtn.addEventListener('click', async () => {
+    const text = textInput.value.trim();
+    if (!text) {
+      showError('Please enter some text first.');
+      return;
+    }
+    if (text.length > MAX_CHARS) {
+      showError(`Text must be ${MAX_CHARS.toLocaleString()} characters or fewer.`);
+      return;
+    }
+
+    hideError();
+    const segs = segCount(text.length);
+    const btnText = document.getElementById('generateBtnText');
+    btnText.textContent = segs > 1 ? `Generating ${segs} segments…` : 'Generating…';
+    setLoading(true);
+
+    // Stop current audio
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    setWavePlaying(false);
+
+    try {
+      const resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          language: languageSelect.value,
+          speaker: speakerSelect.value,
+          pitch: parseFloat(pitchSlider.value),
+          pace: parseFloat(paceSlider.value),
+          loudness: parseFloat(loudnessSlider.value),
+        }),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        showError(data.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      // Decode base64 WAV and set audio source
+      const binary = atob(data.audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+
+      audioPlayer.src = url;
+      downloadBtn.href = url;
+      downloadBtn.download = `voice-${languageSelect.value}-${speakerSelect.value}.wav`;
+
+      resultLang.textContent = languageSelect.value;
+      resultCard.classList.add('visible');
+
+      // Auto-play
+      await audioPlayer.play();
+      playBtn.textContent = '⏸';
+      setWavePlaying(true);
+
+      // Save to history
+      addToHistory(text, languageSelect.value, speakerSelect.value, data.audio);
+
+    } catch (err) {
+      showError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function setLoading(val) {
+    generateBtn.disabled = val;
+    generateBtn.classList.toggle('loading', val);
+    if (!val) {
+      document.getElementById('generateBtnText').textContent = 'Generate Voice';
+    }
+  }
+
+  function showError(msg) {
+    errorText.textContent = msg;
+    errorBanner.classList.add('visible');
+  }
+
+  function hideError() {
+    errorBanner.classList.remove('visible');
+  }
+
+  // ── History ──────────────────────────────────────────────
+  const HISTORY_KEY = 'aavaaz_history';
+  const MAX_HISTORY = 10;
+
+  const historyCard  = document.getElementById('historyCard');
+  const historyList  = document.getElementById('historyList');
+  const historyCount = document.getElementById('historyCount');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+  const LANG_LABELS = {
+    'hi-IN': 'Hindi', 'bn-IN': 'Bengali', 'gu-IN': 'Gujarati', 'od-IN': 'Odia',
+    'kn-IN': 'Kannada', 'ml-IN': 'Malayalam', 'mr-IN': 'Marathi',
+    'pa-IN': 'Punjabi', 'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'en-IN': 'English (IN)',
+  };
+
+  let historyAudio = null;
+  let historyPlayingId = null;
+
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveHistory(items) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); }
+    catch (e) {
+      if (e.name === 'QuotaExceededError') {
+        items.pop();
+        saveHistory(items);
+      }
+    }
+  }
+
+  function relativeTime(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return Math.floor(diff / 86400000) + 'd ago';
+  }
+
+  function stopHistoryAudio() {
+    if (historyAudio) {
+      historyAudio.pause();
+      historyAudio.currentTime = 0;
+    }
+    document.querySelectorAll('.history-play-btn').forEach(b => {
+      b.classList.remove('playing');
+      b.textContent = '▶';
+    });
+    historyPlayingId = null;
+  }
+
+  function renderHistory() {
+    const items = loadHistory();
+    historyCount.textContent = items.length;
+
+    if (items.length === 0) {
+      historyCard.classList.remove('visible');
+      return;
+    }
+
+    historyCard.classList.add('visible');
+    historyList.innerHTML = '';
+
+    items.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+      row.dataset.id = item.id;
+
+      const playBtn2 = document.createElement('button');
+      playBtn2.className = 'history-play-btn';
+      playBtn2.textContent = '▶';
+      playBtn2.title = 'Play';
+
+      const meta = document.createElement('div');
+      meta.className = 'history-meta';
+
+      const textEl = document.createElement('div');
+      textEl.className = 'history-text';
+      textEl.textContent = item.text;
+
+      const tags = document.createElement('div');
+      tags.className = 'history-tags';
+
+      const langTag = document.createElement('span');
+      langTag.className = 'history-tag';
+      langTag.textContent = LANG_LABELS[item.language] || item.language;
+
+      const speakerTag = document.createElement('span');
+      speakerTag.className = 'history-tag';
+      speakerTag.textContent = item.speaker;
+
+      tags.append(langTag, speakerTag);
+      meta.append(textEl, tags);
+
+      const timeEl = document.createElement('span');
+      timeEl.className = 'history-time';
+      timeEl.textContent = relativeTime(item.ts);
+
+      const dlBtn = document.createElement('a');
+      dlBtn.className = 'history-dl-btn';
+      dlBtn.textContent = '⬇';
+      dlBtn.title = 'Download';
+      const dlBlob = base64ToBlob(item.audio);
+      const dlUrl = URL.createObjectURL(dlBlob);
+      dlBtn.href = dlUrl;
+      dlBtn.download = `voice-${item.language}-${item.speaker}.wav`;
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'history-del-btn';
+      delBtn.textContent = '×';
+      delBtn.title = 'Remove';
+
+      row.append(playBtn2, meta, timeEl, dlBtn, delBtn);
+      historyList.appendChild(row);
+
+      playBtn2.addEventListener('click', () => {
+        if (historyPlayingId === item.id) {
+          stopHistoryAudio();
+          return;
+        }
+        stopHistoryAudio();
+        audioPlayer.pause();
+        playBtn.textContent = '▶';
+        setWavePlaying(false);
+
+        const blob = base64ToBlob(item.audio);
+        const url = URL.createObjectURL(blob);
+        historyAudio = new Audio(url);
+        historyPlayingId = item.id;
+        playBtn2.classList.add('playing');
+        playBtn2.textContent = '⏸';
+        historyAudio.play();
+        historyAudio.addEventListener('ended', () => {
+          playBtn2.classList.remove('playing');
+          playBtn2.textContent = '▶';
+          historyPlayingId = null;
+        });
+      });
+
+      delBtn.addEventListener('click', () => {
+        stopHistoryAudio();
+        const items2 = loadHistory().filter(h => h.id !== item.id);
+        saveHistory(items2);
+        renderHistory();
+      });
+    });
+  }
+
+  function base64ToBlob(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: 'audio/wav' });
+  }
+
+  function addToHistory(text, language, speaker, audioB64) {
+    const items = loadHistory();
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      text: text.length > 80 ? text.slice(0, 80) + '…' : text,
+      language,
+      speaker,
+      audio: audioB64,
+      ts: Date.now(),
+    };
+    items.unshift(entry);
+    if (items.length > MAX_HISTORY) items.length = MAX_HISTORY;
+    saveHistory(items);
+    renderHistory();
+  }
+
+  clearHistoryBtn.addEventListener('click', () => {
+    stopHistoryAudio();
+    saveHistory([]);
+    renderHistory();
+  });
+
+  // Stop history audio when main player starts
+  audioPlayer.addEventListener('play', () => stopHistoryAudio());
+
+  // Patch generate success to call addToHistory
+  const _origGenerate = generateBtn.onclick;
+  // We'll hook into the fetch flow by wrapping — redefine generate click below.
+  // (History injection happens inside the generateBtn listener above via postGenerate)
+
+  function postGenerate(text, language, speaker, audioB64) {
+    addToHistory(text, language, speaker, audioB64);
+  }
+
+  renderHistory();
+
+  // ── Share button ──────────────────────────────────────────
+  const shareBtn = document.getElementById('shareBtn');
+  const toast    = document.getElementById('toast');
+  let toastTimer = null;
+
+  function showToast(icon, msg, duration = 2400) {
+    toast.innerHTML = `<span>${icon}</span> ${msg}`;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  shareBtn.addEventListener('click', async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'आवाज़ — Indian Language Voice Generator', url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      shareBtn.classList.add('copied');
+      shareBtn.querySelector('.share-icon').textContent = '✓';
+      shareBtn.querySelector('.share-label').textContent = 'Copied!';
+      showToast('🔗', 'Link copied to clipboard!');
+      setTimeout(() => {
+        shareBtn.classList.remove('copied');
+        shareBtn.querySelector('.share-icon').textContent = '🔗';
+        shareBtn.querySelector('.share-label').textContent = 'Share';
+      }, 2200);
+    } catch {
+      const inp = document.createElement('input');
+      inp.value = url;
+      document.body.appendChild(inp);
+      inp.select();
+      document.execCommand('copy');
+      document.body.removeChild(inp);
+      showToast('🔗', 'Link copied to clipboard!');
+    }
+  });
+
+  // ── Transliteration ──────────────────────────────────────
+  const translitToggle   = document.getElementById('translitToggle');
+  const translitLabel    = document.getElementById('translitLabel');
+  const translitStatus   = document.getElementById('translitStatus');
+  const translitStatusTx = document.getElementById('translitStatusText');
+
+  const ROMAN_PLACEHOLDER = 'Type in Roman/Hinglish, e.g. "namaste kaise hain"\n\nIt will auto-convert to the selected script as you type.';
+  const NATIVE_PLACEHOLDER = 'यहाँ हिंदी में लिखें... \n\nاردو میں لکھیں...\n\nOr type in any Indian language supported below.';
+
+  let translitDebounce = null;
+  let translitActive = false;
+
+  function setTranslitMode(on) {
+    translitActive = on;
+    translitLabel.classList.toggle('active', on);
+    textInput.placeholder = on ? ROMAN_PLACEHOLDER : NATIVE_PLACEHOLDER;
+    if (!on) {
+      clearTimeout(translitDebounce);
+      translitStatus.classList.remove('visible');
+    }
+  }
+
+  translitToggle.addEventListener('change', () => setTranslitMode(translitToggle.checked));
+
+  // Also flip when language changes — some languages may not support transliteration well
+  languageSelect.addEventListener('change', () => {
+    if (translitActive && textInput.value.trim()) triggerTranslit();
+  });
+
+  async function triggerTranslit() {
+    const raw = textInput.value;
+    if (!raw.trim()) {
+      translitStatus.classList.remove('visible');
+      return;
+    }
+
+    translitStatus.classList.add('visible');
+    translitStatusTx.textContent = 'Converting…';
+
+    try {
+      const resp = await fetch('/api/transliterate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: raw, language: languageSelect.value }),
+      });
+      const data = await resp.json();
+
+      if (data.error) {
+        translitStatusTx.textContent = '⚠ ' + data.error;
+        return;
+      }
+
+      const converted = data.transliterated || '';
+      if (converted && converted !== raw) {
+        textInput.value = converted;
+        textInput.dispatchEvent(new Event('input'));
+      }
+      translitStatusTx.textContent = converted === raw ? 'No change detected' : 'Converted ✓';
+      setTimeout(() => translitStatus.classList.remove('visible'), 2200);
+    } catch {
+      translitStatusTx.textContent = '⚠ Network error';
+      setTimeout(() => translitStatus.classList.remove('visible'), 2000);
+    }
+  }
+
+  textInput.addEventListener('input', () => {
+    if (!translitActive) return;
+    clearTimeout(translitDebounce);
+    translitStatus.classList.add('visible');
+    translitStatusTx.textContent = 'Converting…';
+    translitDebounce = setTimeout(triggerTranslit, 650);
+  });
+
+  // ── Batch Export ──────────────────────────────────────────
+  const batchInput        = document.getElementById('batchInput');
+  const batchMeta         = document.getElementById('batchMeta');
+  const batchBtn          = document.getElementById('batchBtn');
+  const batchBtnText      = document.getElementById('batchBtnText');
+  const batchProgressWrap = document.getElementById('batchProgressWrap');
+  const batchProgressFill = document.getElementById('batchProgressFill');
+  const batchProgressLabel= document.getElementById('batchProgressLabel');
+  const batchError        = document.getElementById('batchError');
+
+  function getBatchLines() {
+    return batchInput.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  }
+  function showBatchError(msg) { batchError.textContent = msg; batchError.classList.add('visible'); }
+  function hideBatchError()    { batchError.classList.remove('visible'); }
+
+  batchInput.addEventListener('input', () => {
+    hideBatchError();
+    const lines = getBatchLines();
+    batchMeta.textContent = lines.length === 0
+      ? '0 lines · uses current voice settings above'
+      : `${lines.length} line${lines.length !== 1 ? 's' : ''} → ${lines.length} WAV file${lines.length !== 1 ? 's' : ''} in ZIP`;
+  });
+
+  batchBtn.addEventListener('click', async () => {
+    const lines = getBatchLines();
+    hideBatchError();
+
+    if (lines.length === 0) { showBatchError('Add at least one line of text above.'); return; }
+    if (lines.length > 100) { showBatchError('Maximum 100 lines per batch.'); return; }
+
+    const lang     = languageSelect.value;
+    const speaker  = speakerSelect.value;
+    const pitch    = parseFloat(pitchSlider.value);
+    const pace     = parseFloat(paceSlider.value);
+    const loudness = parseFloat(loudnessSlider.value);
+
+    batchBtn.disabled = true;
+    batchBtn.classList.add('loading');
+    batchBtnText.textContent = `Generating 0 of ${lines.length}…`;
+    batchProgressFill.style.width = '0%';
+    batchProgressLabel.textContent = 'Starting…';
+    batchProgressWrap.style.display = 'flex';
+
+    const zip = new JSZip();
+    let failed = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      batchProgressFill.style.width = Math.round((i / lines.length) * 100) + '%';
+      batchProgressLabel.textContent = `Generating line ${i + 1} of ${lines.length}…`;
+      batchBtnText.textContent       = `Generating ${i + 1} of ${lines.length}…`;
+
+      try {
+        const resp = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: lines[i], language: lang, speaker, pitch, pace, loudness }),
+        });
+        const data = await resp.json();
+        if (data.audio) {
+          const binary = atob(data.audio);
+          const bytes  = new Uint8Array(binary.length);
+          for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+          zip.file(`line-${String(i + 1).padStart(3, '0')}-${lang}-${speaker}.wav`, bytes);
+        } else { failed++; }
+      } catch (_) { failed++; }
+    }
+
+    batchProgressFill.style.width    = '100%';
+    batchProgressLabel.textContent   = 'Packing ZIP…';
+    batchBtnText.textContent         = 'Packing ZIP…';
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: `aavaaz-batch-${lang}-${lines.length}clips.zip` });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+    const ok = lines.length - failed;
+    batchProgressLabel.textContent = failed === 0
+      ? `✓ Done! ${ok} clip${ok !== 1 ? 's' : ''} downloaded.`
+      : `Done — ${ok} of ${lines.length} succeeded (${failed} failed).`;
+    batchBtnText.textContent = 'Generate & Download ZIP';
+    batchBtn.disabled = false;
+    batchBtn.classList.remove('loading');
+
+    setTimeout(() => { batchProgressWrap.style.display = 'none'; }, 5000);
+  });
+
+</script>
+</body>
+</html>
