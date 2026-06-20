@@ -528,6 +528,50 @@
     .sec-btn:hover { background: var(--orG); border-color: rgba(249,115,22,.3); color: var(--or2); }
     .sec-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+    /* ─── THEME TOGGLE BUTTON ─────────────────────────────── */
+    .theme-toggle {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 9px 12px; margin-bottom: 8px;
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: var(--rxs); color: var(--t2);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background .18s, color .18s, border-color .18s;
+    }
+    .theme-toggle:hover { background: var(--s3); color: var(--text); border-color: var(--borderB); }
+
+    /* ─── LIGHT MODE ───────────────────────────────────────── */
+    [data-theme="light"] {
+      --bg:     #f4f4f8;
+      --bg2:    #ededf3;
+      --s1:     #ffffff;
+      --s2:     #f0f0f8;
+      --s3:     #e2e2ee;
+      --border: rgba(0,0,0,0.07);
+      --borderB:rgba(0,0,0,0.13);
+      --text:   #0d0d1a;
+      --t2:     #44445a;
+      --t3:     #9090a8;
+    }
+    [data-theme="light"] body::before { background: radial-gradient(circle,rgba(249,115,22,.06) 0%,transparent 70%); }
+    [data-theme="light"] body::after  { background: radial-gradient(circle,rgba(139,92,246,.06) 0%,transparent 70%); }
+
+    [data-theme="light"] textarea,
+    [data-theme="light"] #batchInp,
+    [data-theme="light"] #vSearch input {
+      background: #fff;
+      border-color: rgba(0,0,0,0.12);
+    }
+    [data-theme="light"] textarea:focus,
+    [data-theme="light"] #batchInp:focus {
+      border-color: rgba(249,115,22,.5);
+      box-shadow: 0 0 0 3px rgba(249,115,22,.09);
+    }
+    [data-theme="light"] input[type="range"] { background: var(--s3); }
+    [data-theme="light"] .set-sel { background: #fff; border-color: rgba(0,0,0,.1); }
+    [data-theme="light"] .sidebar { box-shadow: 2px 0 18px rgba(0,0,0,.07); }
+    [data-theme="light"] .player  { background: linear-gradient(135deg,rgba(249,115,22,.06),rgba(139,92,246,.06)); }
+
     /* Mobile */
     .mob-menu {
       display: none; background: var(--s1); border: 1px solid var(--border);
@@ -580,6 +624,12 @@
       <span class="nav-btn-icon">⚙️</span> Settings
     </button>
   </div>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="themeToggle" title="Toggle light / dark mode">
+    <span id="themeIcon">☀️</span>
+    <span id="themeLabel">Light mode</span>
+  </button>
 
   <div class="usage-box">
     <div class="usage-top">
@@ -676,7 +726,7 @@
                   <span class="sl-lbl">Pitch</span>
                   <span class="sl-val" id="pitchV">0</span>
                 </div>
-                <input type="range" id="pitchR" min="-10" max="10" step="1" value="0" />
+                <input type="range" id="pitchR" min="-20" max="20" step="1" value="0" />
               </div>
               <div class="sl-field">
                 <div class="sl-hd">
@@ -1272,8 +1322,41 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Theme toggle ──────────────────────────────────────────────────────
+const VALID_SPEAKERS = new Set([
+  'anushka','manisha','vidya','priya','neha','shruti',
+  'abhilash','aditya','rahul','rohan','amit','kabir',
+]);
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const isDark = t === 'dark';
+  document.getElementById('themeIcon').textContent  = isDark ? '☀️' : '🌙';
+  document.getElementById('themeLabel').textContent = isDark ? 'Light mode' : 'Dark mode';
+  localStorage.setItem('awz_theme', t);
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+});
+
 // ── Init ──────────────────────────────────────────────────────────────
 (function init() {
+  // ── Purge stale localStorage values from old app versions ──
+  // Old speaker names (v1 era) would cause "string did not match expected pattern"
+  const savedSpk = localStorage.getItem('awz_spk');
+  if (savedSpk && !VALID_SPEAKERS.has(savedSpk)) {
+    localStorage.removeItem('awz_spk');
+  }
+
+  // Re-read after cleanup
+  const cleanSpk = localStorage.getItem('awz_spk') || 'anushka';
+  if (VALID_SPEAKERS.has(cleanSpk)) speaker = cleanSpk;
+
+  // Apply saved theme (default: dark)
+  applyTheme(localStorage.getItem('awz_theme') || 'dark');
+
   renderLangs();
   renderVoices();
   loadHist();
