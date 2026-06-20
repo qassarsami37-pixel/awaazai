@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}AwaazAI — India's #1 Hindi AI Voice Studio{% endblock %}</title>
+<meta name="description" content="{% block meta_desc %}AwaazAI — Generate natural Hindi, Urdu and Indian language voices instantly using AI. Free to start. Professional quality.{% endblock %}"/>
+<meta name="keywords" content="hindi voice generator, AI voice hindi, text to speech hindi, hinglish TTS, Indian language voice AI, awaazai"/>
+<meta property="og:title" content="AwaazAI — India's #1 Hindi AI Voice Studio"/>
+<meta property="og:description" content="Generate natural Indian language speech with AI. Hindi, Bengali, Tamil, Telugu and more."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+{% block head %}{% endblock %}
+<script>
+// Apply theme before paint to avoid flash
+(function(){
+  var t = localStorage.getItem('awz_theme');
+  if (!t) {
+    t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</head>
+<body>
+<!-- Loading screen -->
+<div id="pageLoader">
+  <div class="loader-logo">AwaazAI</div>
+  <div class="loader-sub">India's #1 Hindi AI Voice Studio</div>
+  <div class="loader-ring"></div>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a href="/" class="nav-logo">AwaazAI</a>
+  <div class="nav-links">
+    <a href="/studio" class="nav-link {% if request.path == '/studio' %}active{% endif %}">Studio</a>
+    <a href="/pricing" class="nav-link {% if request.path == '/pricing' %}active{% endif %}">Pricing</a>
+    <a href="/blog" class="nav-link {% if request.path == '/blog' %}active{% endif %}">Blog</a>
+    <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %}">About</a>
+    <a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %}">Contact</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button>
+    {% if user %}
+      <div class="nav-user">
+        <span>{{ user.name or user.email.split('@')[0] }}</span>
+        <span class="plan-badge {{ user.plan }}">{{ user.plan }}</span>
+      </div>
+      <a href="/dashboard" class="btn btn-secondary btn-sm">Dashboard</a>
+      <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+    {% else %}
+      <a href="/login" class="btn btn-secondary btn-sm">Log in</a>
+      <a href="/signup" class="btn btn-primary btn-sm">Sign up free</a>
+    {% endif %}
+    <button class="mob-menu-btn" onclick="toggleMobMenu()">☰</button>
+  </div>
+</nav>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="max-width:800px;margin:16px auto;padding:0 24px;">
+{% for cat, msg in messages %}
+  <div class="alert alert-{{ 'success' if cat == 'success' else 'error' if cat == 'error' else 'info' }}">{{ msg }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<!-- Footer -->
+<footer>
+  <div>
+    <span style="font-weight:700;background:linear-gradient(135deg,#f97316,#8b5cf6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">AwaazAI</span>
+    &nbsp;— India's #1 Hindi AI Voice Studio &copy; {{ 2025 }}
+  </div>
+  <div class="footer-links">
+    <a href="/about">About</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/blog">Blog</a>
+    <a href="/contact">Contact</a>
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+  </div>
+</footer>
+
+<!-- Toast container -->
+<div id="toast"></div>
+
+<script>
+// ── Theme ────────────────────────────────────────────
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('awz_theme', t);
+  var btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+document.getElementById('themeBtn').addEventListener('click', function(){
+  var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+});
+// Sync icon with current theme
+(function(){
+  var t = document.documentElement.getAttribute('data-theme') || 'dark';
+  var btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+})();
+
+// System theme change listener
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e){
+  if(!localStorage.getItem('awz_theme')) applyTheme(e.matches ? 'dark' : 'light');
+});
+
+// ── Loading screen ────────────────────────────────────
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var l = document.getElementById('pageLoader');
+    if(l) l.classList.add('loaded');
+  }, 400);
+});
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg, type){
+  type = type || 'info';
+  var icons = {success:'✅', error:'❌', info:'ℹ️'};
+  var el = document.createElement('div');
+  el.className = 'toast-item ' + type;
+  el.innerHTML = '<span>' + icons[type] + '</span><span>' + msg + '</span>';
+  document.getElementById('toast').appendChild(el);
+  setTimeout(function(){
+    el.style.animation = 'slideOut .3s ease forwards';
+    setTimeout(function(){ el.remove(); }, 300);
+  }, 3500);
+}
+
+function toggleMobMenu(){
+  var links = document.querySelector('.nav-links');
+  if(links) {
+    links.style.display = links.style.display === 'flex' ? 'none' : 'flex';
+    links.style.flexDirection = 'column';
+    links.style.position = 'absolute';
+    links.style.top = '64px';
+    links.style.left = '0';
+    links.style.right = '0';
+    links.style.background = 'var(--s1)';
+    links.style.padding = '16px';
+    links.style.borderBottom = '1px solid var(--border)';
+    links.style.zIndex = '200';
+  }
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
