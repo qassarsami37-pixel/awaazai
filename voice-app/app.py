@@ -138,10 +138,11 @@ def text_to_speech():
 
     text = data.get("text", "").strip()
     language = data.get("language", "hi-IN")
-    speaker = data.get("speaker", "meera")
-    pitch = float(data.get("pitch", 0))
-    pace = float(data.get("pace", 1.0))
-    loudness = float(data.get("loudness", 1.5))
+    speaker = data.get("speaker", "anushka")
+    # Clamp all numeric params to the ranges accepted by bulbul:v2
+    pitch    = max(-20, min(20,  int(round(float(data.get("pitch",    0))))))
+    pace     = max(0.5, min(2.0, float(data.get("pace",     1.0))))
+    loudness = max(0.1, min(3.0, float(data.get("loudness", 1.5))))
 
     if not text:
         return jsonify({"error": "Text is required"}), 400
@@ -172,9 +173,9 @@ def text_to_speech():
             "inputs": [seg],
             "target_language_code": language,
             "speaker": speaker,
-            "pitch": int(round(pitch)),
-            "pace": pace,
-            "loudness": loudness,
+            "pitch": pitch,      # already int, clamped -20..20
+            "pace": pace,        # float, clamped 0.5..2.0
+            "loudness": loudness, # float, clamped 0.1..3.0
             "speech_sample_rate": 22050,
             "enable_preprocessing": True,
             "model": SARVAM_MODEL,
