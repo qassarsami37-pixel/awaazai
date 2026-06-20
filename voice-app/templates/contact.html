@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Contact Us — AwaazAI{% endblock %}
+{% block content %}
+<div class="page" style="max-width:640px;">
+  <h1 class="page-title">Contact Us</h1>
+  <p class="page-sub">Have a question, feedback, or a partnership idea? We'd love to hear from you.</p>
+
+  <div class="card" style="margin-bottom:24px;">
+    <form method="POST" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input class="form-input" type="text" name="name" placeholder="Full name" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" name="email" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-input" name="message" rows="6" placeholder="Tell us what's on your mind..." required style="resize:vertical;min-height:120px;"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="align-self:flex-start;padding:12px 32px;">Send Message</button>
+    </form>
+  </div>
+
+  <div class="card card-sm">
+    <p style="color:var(--t2);font-size:14px;">We typically respond within 24 hours. For urgent issues, email us directly at <a href="mailto:support@awaazai.in">support@awaazai.in</a>.</p>
+  </div>
+</div>
+{% endblock %}
