@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AwaazAI{% endblock %}
+{% block content %}
+<div class="page">
+  <h1 class="page-title">Your Dashboard</h1>
+  <p class="page-sub">Welcome back, {{ user.name or user.email.split('@')[0] }} 👋</p>
+
+  <!-- Stats -->
+  <div class="dash-grid">
+    <div class="stat-card">
+      <div class="stat-card-num">{{ total_gen }}</div>
+      <div class="stat-card-label">Total Voices Generated</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">{{ today_cnt }}</div>
+      <div class="stat-card-label">Generated Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">{% if daily_limit == 9999 %}∞{% else %}{{ daily_limit - today_cnt }}{% endif %}</div>
+      <div class="stat-card-label">Credits Remaining Today</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:20px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ plan_info.name | upper }}</div>
+      <div class="stat-card-label">Current Plan <a href="/pricing" style="color:var(--or1);font-size:11px;">Upgrade</a></div>
+    </div>
+  </div>
+
+  <!-- Usage bar -->
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:14px;font-weight:600;">Today's usage</span>
+      <span style="font-size:13px;color:var(--t2);">{{ today_cnt }} / {% if daily_limit == 9999 %}Unlimited{% else %}{{ daily_limit }}{% endif %}</span>
+    </div>
+    <div class="usage-track" style="height:8px;">
+      <div class="usage-fill" style="width:{% if daily_limit == 9999 %}10{% else %}{{ [(today_cnt / daily_limit * 100)|int, 100]|min }}{% endif %}%;"></div>
+    </div>
+    {% if daily_limit != 9999 and today_cnt >= (daily_limit * 0.8)|int %}
+    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0;">⚠️ You've used {{ ((today_cnt / daily_limit) * 100)|int }}% of today's credits. <a href="/pricing">Upgrade for unlimited.</a></div>
+    {% endif %}
+  </div>
+
+  <!-- 7-day chart -->
+  <div class="card" style="margin-bottom:24px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:16px;">Last 7 Days</div>
+    {% if chart %}
+      {% set max_count = chart.values() | max %}
+      <div class="chart-bar-wrap">
+        {% for key, val in chart.items() %}
+          {% set pct = ((val / max_count) * 100) | int if max_count > 0 else 10 %}
+          <div class="chart-bar" style="height:{{ [pct, 6]|max }}%" title="{{ key }}: {{ val }} generations"></div>
+        {% endfor %}
+      </div>
+      <div style="margin-top:8px;color:var(--t3);font-size:11px;">
+        {% for key, val in chart.items() %}
+          <span style="display:inline-block;margin-right:10px;">{{ key[-5:] }}: <strong>{{ val }}</strong></span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="color:var(--t3);font-size:13px;padding:16px 0;">No generation data yet. Start creating in the studio!</div>
+    {% endif %}
+  </div>
+
+  <!-- History -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h2 style="font-size:20px;font-weight:700;">Recent History</h2>
+    <a href="/studio" class="btn btn-primary btn-sm">+ New Voice</a>
+  </div>
+
+  {% if history %}
+  <div style="background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-bd);border-radius:16px;overflow:hidden;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Text Preview</th>
+          <th>Language</th>
+          <th>Speaker</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in history %}
+        <tr>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.text_preview }}</td>
+          <td>{{ item.language }}</td>
+          <td>{{ item.speaker }}</td>
+          <td style="white-space:nowrap;">{{ item.created_at[:16] }}</td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="playItem('{{ item.audio_b64[:20] }}...','{{ item.id }}')">▶</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card" style="text-align:center;padding:48px;color:var(--t3);">
+    <div style="font-size:40px;margin-bottom:12px;">🎤</div>
+    <p>No voices generated yet. <a href="/studio">Start creating!</a></p>
+  </div>
+  {% endif %}
+
+  <!-- Referral -->
+  <div class="card" style="margin-top:32px;">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">🤝 Referral Program</h3>
+    <p style="color:var(--t2);font-size:14px;margin-bottom:12px;">Share your code and earn 10 bonus credits for each friend who signs up.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" value="{{ user.referral_code or 'N/A' }}" id="refCode" readonly
+        style="font-family:monospace;letter-spacing:2px;font-size:15px;font-weight:700;background:var(--s2);border:1px solid var(--border);color:var(--or1);border-radius:8px;padding:10px 16px;flex:1;min-width:140px;"/>
+      <button class="btn btn-secondary" onclick="copyRef()">Copy Code</button>
+    </div>
+  </div>
+
+  <!-- Profile link -->
+  <div style="margin-top:16px;text-align:right;">
+    <a href="/profile" class="btn btn-secondary btn-sm">Edit Profile</a>
+    <a href="/logout" class="btn btn-secondary btn-sm" style="margin-left:8px;">Logout</a>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function copyRef(){
+  var el = document.getElementById('refCode');
+  navigator.clipboard.writeText(el.value).then(()=>showToast('Referral code copied!','success'));
+}
+function playItem(preview, id){ showToast('Open Studio to replay full audio','info'); }
+</script>
+{% endblock %}
