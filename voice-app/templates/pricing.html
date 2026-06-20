@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Pricing — AwaazAI{% endblock %}
+{% block content %}
+<div class="page" style="max-width:1000px;">
+  <div style="text-align:center;margin-bottom:48px;">
+    <h1 class="page-title" style="font-size:40px;">Simple, transparent pricing</h1>
+    <p class="page-sub" style="font-size:16px;">Start free. Upgrade when you need more.</p>
+  </div>
+
+  <div class="price-grid">
+    <!-- Free -->
+    <div class="price-card">
+      <div class="price-name">Free</div>
+      <div class="price-amount"><span>₹</span>0</div>
+      <div class="price-period">forever free</div>
+      <ul class="price-features">
+        <li>10 voices per day</li>
+        <li>All 10 Indian languages</li>
+        <li>All 12 AI voices</li>
+        <li>Pitch, Speed, Loudness controls</li>
+        <li>Voice presets</li>
+        <li>WAV download</li>
+        <li>WhatsApp share</li>
+        <li>Voice history (20 items)</li>
+      </ul>
+      {% if not user %}
+      <a href="/signup" class="btn btn-secondary" style="width:100%;text-align:center;">Get started free</a>
+      {% else %}
+      <div class="btn btn-secondary" style="width:100%;text-align:center;opacity:.6;cursor:default;">Current plan</div>
+      {% endif %}
+    </div>
+
+    <!-- Pro -->
+    <div class="price-card popular">
+      <div class="popular-badge">Most Popular</div>
+      <div class="price-name">Pro</div>
+      <div class="price-amount"><span>₹</span>99</div>
+      <div class="price-period">per month</div>
+      <ul class="price-features">
+        <li>Unlimited voices per day</li>
+        <li>All Free features</li>
+        <li>Bulk upload (.txt files)</li>
+        <li>Priority generation</li>
+        <li>Full voice history</li>
+        <li>Download all as ZIP</li>
+        <li>10 bonus credits via referral</li>
+        <li>API key access</li>
+      </ul>
+      {% if user and user.plan == 'pro' %}
+      <div class="btn btn-secondary" style="width:100%;text-align:center;opacity:.6;cursor:default;">Current plan</div>
+      {% else %}
+      <button class="btn btn-primary" style="width:100%;" onclick="startPayment('pro',99)">Upgrade to Pro — ₹99/mo</button>
+      {% endif %}
+    </div>
+
+    <!-- Business -->
+    <div class="price-card">
+      <div class="price-name">Business</div>
+      <div class="price-amount"><span>₹</span>299</div>
+      <div class="price-period">per month</div>
+      <ul class="price-features">
+        <li>Everything in Pro</li>
+        <li>REST API access</li>
+        <li>API key management</li>
+        <li>UPI / Card / Netbanking</li>
+        <li>Priority support</li>
+        <li>Admin usage reports</li>
+        <li>White-label audio files</li>
+        <li>Custom invoice on request</li>
+      </ul>
+      {% if user and user.plan == 'business' %}
+      <div class="btn btn-secondary" style="width:100%;text-align:center;opacity:.6;cursor:default;">Current plan</div>
+      {% else %}
+      <button class="btn btn-outline" style="width:100%;" onclick="startPayment('business',299)">Upgrade to Business — ₹299/mo</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div style="margin-top:64px;">
+    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:32px;">Frequently asked questions</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+      <div class="card card-sm">
+        <h3 style="font-size:15px;margin-bottom:8px;">Can I cancel anytime?</h3>
+        <p style="color:var(--t2);font-size:13px;">Yes, you can cancel at any time. Your plan stays active until the end of the billing period.</p>
+      </div>
+      <div class="card card-sm">
+        <h3 style="font-size:15px;margin-bottom:8px;">What languages are supported?</h3>
+        <p style="color:var(--t2);font-size:13px;">Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Odia, Punjabi, Tamil, Telugu, and English (Indian).</p>
+      </div>
+      <div class="card card-sm">
+        <h3 style="font-size:15px;margin-bottom:8px;">What payment methods are accepted?</h3>
+        <p style="color:var(--t2);font-size:13px;">UPI, credit/debit card, net banking, and wallets via Razorpay.</p>
+      </div>
+      <div class="card card-sm">
+        <h3 style="font-size:15px;margin-bottom:8px;">How does the API work?</h3>
+        <p style="color:var(--t2);font-size:13px;">Pro and Business users get an API key. Send POST requests to /api/v1/tts with your X-API-Key header.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if razorpay_key %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endif %}
+<script>
+async function startPayment(plan, amount){
+  {% if not user %}
+  location.href = '/signup';
+  return;
+  {% endif %}
+  {% if not razorpay_key %}
+  alert('Payment gateway is not yet configured. Please contact support.');
+  return;
+  {% endif %}
+  try {
+    var resp = await fetch('/api/payment/create-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({plan, amount})
+    });
+    var order = await resp.json();
+    if(!resp.ok || !order.order_id){ alert(order.error || 'Failed to create order'); return; }
+    var options = {
+      key: '{{ razorpay_key }}',
+      amount: order.amount,
+      currency: order.currency || 'INR',
+      name: 'AwaazAI',
+      description: plan.charAt(0).toUpperCase()+plan.slice(1)+' Plan',
+      order_id: order.order_id,
+      prefill: { email: '{{ user.email if user else "" }}' },
+      theme: { color: '#f97316' },
+      handler: async function(response){
+        var vResp = await fetch('/api/payment/verify', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ ...response, plan })
+        });
+        var vData = await vResp.json();
+        if(vData.ok){ alert('Payment successful! You are now on the '+plan+' plan.'); location.reload(); }
+        else alert('Payment verification failed. Contact support.');
+      }
+    };
+    var rzp = new Razorpay(options);
+    rzp.open();
+  } catch(e){ alert('Payment error: ' + e.message); }
+}
+</script>
+{% endblock %}
