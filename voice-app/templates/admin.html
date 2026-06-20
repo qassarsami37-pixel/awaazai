@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — AwaazAI{% endblock %}
+{% block content %}
+<div class="page">
+  <h1 class="page-title">Admin Panel</h1>
+  <p class="page-sub">Platform management for administrators.</p>
+
+  <!-- Stats -->
+  <div class="dash-grid" style="margin-bottom:32px;">
+    <div class="stat-card">
+      <div class="stat-card-num">{{ users|length }}</div>
+      <div class="stat-card-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">{{ total_gen }}</div>
+      <div class="stat-card-label">Total Generations</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">{{ today_gen }}</div>
+      <div class="stat-card-label">Generated Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">{{ users|selectattr('plan','eq','pro')|list|length + users|selectattr('plan','eq','business')|list|length }}</div>
+      <div class="stat-card-label">Paid Users</div>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="card" style="margin-bottom:32px;padding:0;overflow:hidden;">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+      <h2 style="font-size:16px;font-weight:700;">All Users</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="tbl">
+        <thead><tr>
+          <th>ID</th><th>Email</th><th>Name</th><th>Plan</th><th>Verified</th><th>Joined</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.name or '—' }}</td>
+            <td><span class="plan-badge {{ u.plan }}">{{ u.plan }}</span></td>
+            <td>{{ '✅' if u.verified else '❌' }}</td>
+            <td style="white-space:nowrap;">{{ u.created_at[:10] }}</td>
+            <td style="white-space:nowrap;">
+              <select style="background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px;"
+                onchange="setPlan({{ u.id }},this.value)">
+                <option {% if u.plan=='free' %}selected{% endif %}>free</option>
+                <option {% if u.plan=='pro' %}selected{% endif %}>pro</option>
+                <option {% if u.plan=='business' %}selected{% endif %}>business</option>
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Contact messages -->
+  {% if msgs %}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+      <h2 style="font-size:16px;font-weight:700;">Contact Messages</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for m in msgs %}
+          <tr>
+            <td>{{ m.name }}</td>
+            <td>{{ m.email }}</td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.message }}</td>
+            <td>{{ m.created_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function setPlan(uid, plan){
+  var resp = await fetch('/api/admin/set-plan', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({user_id: uid, plan})
+  });
+  var data = await resp.json();
+  if(data.ok) showToast('Plan updated to '+plan, 'success');
+  else showToast(data.error||'Failed','error');
+}
+</script>
+{% endblock %}
